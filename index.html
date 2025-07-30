@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Remote Printer with CORS Solution</title>
+    <title>Remote Printer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         :root {
@@ -11,7 +11,6 @@
             --primary-dark: #3367d6;
             --success: #34a853;
             --error: #ea4335;
-            --warning: #fbbc05;
             --gray: #f5f5f5;
             --dark: #333;
             --light: #fff;
@@ -40,20 +39,13 @@
             text-align: center;
             margin: 30px 0;
             width: 100%;
-            max-width: 800px;
+            max-width: 600px;
         }
         
         h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
             color: var(--primary);
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
-        }
-        
-        .subtitle {
-            font-size: 1.1rem;
-            color: #555;
-            margin-bottom: 30px;
         }
         
         .card {
@@ -62,13 +54,8 @@
             box-shadow: var(--shadow);
             padding: 30px;
             width: 100%;
-            max-width: 800px;
+            max-width: 600px;
             margin-bottom: 30px;
-            transition: transform 0.3s ease;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
         }
         
         .form-group {
@@ -80,22 +67,14 @@
             margin-bottom: 8px;
             font-weight: 600;
             color: #444;
-            font-size: 1rem;
         }
         
-        input, select, .file-input {
+        input, .file-input {
             width: 100%;
             padding: 14px;
             border: 2px solid var(--border);
             border-radius: 10px;
             font-size: 16px;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-        
-        input:focus, select:focus {
-            border-color: var(--primary);
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
         }
         
         .file-input {
@@ -117,15 +96,6 @@
             cursor: pointer;
         }
         
-        .file-input span {
-            color: #777;
-        }
-        
-        .file-name {
-            font-weight: 500;
-            color: var(--primary);
-        }
-        
         button {
             background: var(--primary);
             color: var(--light);
@@ -136,19 +106,11 @@
             font-weight: 600;
             cursor: pointer;
             width: 100%;
-            transition: background 0.3s, transform 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            transition: background 0.3s;
         }
         
         button:hover {
             background: var(--primary-dark);
-        }
-        
-        button:active {
-            transform: scale(0.98);
         }
         
         button:disabled {
@@ -162,9 +124,6 @@
             border-radius: 10px;
             font-size: 16px;
             display: none;
-            align-items: center;
-            gap: 15px;
-            line-height: 1.5;
         }
         
         .error {
@@ -181,435 +140,154 @@
             display: flex !important;
         }
         
-        .warning {
-            background-color: rgba(251, 188, 5, 0.1);
-            border: 1px solid rgba(251, 188, 5, 0.2);
-            color: var(--warning);
-            display: flex !important;
-        }
-        
         .loading {
             display: inline-block;
-            width: 24px;
-            height: 24px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
             border-radius: 50%;
-            border-top-color: var(--light);
+            border-top-color: #fff;
             animation: spin 1s ease-in-out infinite;
-        }
-        
-        .icon {
-            font-size: 24px;
-            min-width: 24px;
         }
         
         @keyframes spin {
             to { transform: rotate(360deg); }
-        }
-        
-        .print-modes {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 10px;
-        }
-        
-        .mode-option {
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .mode-option.selected {
-            border-color: var(--primary);
-            background: rgba(66, 133, 244, 0.05);
-        }
-        
-        .mode-option i {
-            font-size: 32px;
-            margin-bottom: 10px;
-            display: block;
-        }
-        
-        .mode-option.color i {
-            color: #4285f4;
-        }
-        
-        .mode-option.bw i {
-            color: #5f6368;
-        }
-        
-        .password-container {
-            position: relative;
-        }
-        
-        .toggle-password {
-            position: absolute;
-            right: 15px;
-            top: 42px;
-            background: none;
-            border: none;
-            color: #777;
-            cursor: pointer;
-            width: auto;
-            padding: 0;
-        }
-        
-        .config-section {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 20px;
-            border: 1px solid #eaeaea;
-        }
-        
-        .config-toggle {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            margin-bottom: 15px;
-        }
-        
-        .config-content {
-            display: none;
-        }
-        
-        .config-content.active {
-            display: block;
-        }
-        
-        .proxy-option {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 10px 0;
-        }
-        
-        footer {
-            text-align: center;
-            margin-top: auto;
-            padding: 20px;
-            color: #666;
-            font-size: 0.9rem;
-            width: 100%;
-        }
-        
-        @media (max-width: 600px) {
-            .card {
-                padding: 20px;
-            }
-            
-            h1 {
-                font-size: 2rem;
-            }
-            
-            .print-modes {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
 <body>
     <header>
         <h1>Remote Printer</h1>
-        <p class="subtitle">Print documents from anywhere in the world</p>
+        <p>Print documents through cloud proxy</p>
     </header>
     
     <div class="card">
         <div class="form-group">
-            <label for="fileToPrint">Select File to Print</label>
+            <label for="fileToPrint">Select File</label>
             <div class="file-input">
-                <input type="file" id="fileToPrint" accept=".pdf,.jpg,.jpeg,.png" required>
+                <input type="file" id="fileToPrint" accept=".pdf,.jpg,.jpeg,.png,.txt" required>
                 <span id="fileName">No file selected</span>
             </div>
         </div>
         
         <div class="form-group">
-            <label>Print Mode</label>
-            <div class="print-modes">
-                <div class="mode-option color selected" data-mode="color">
-                    <i>🎨</i>
-                    Color Printing
-                </div>
-                <div class="mode-option bw" data-mode="bw">
-                    <i>⚫</i>
-                    Black & White
-                </div>
-            </div>
-            <input type="hidden" id="printMode" value="color">
-        </div>
-        
-        <div class="form-group password-container">
             <label for="password">Security Password</label>
-            <input type="password" id="password" placeholder="Enter your secure password" required>
-            <button type="button" class="toggle-password">👁️</button>
+            <input type="password" id="password" placeholder="Enter your password" required>
         </div>
         
-        <button type="submit" id="submitBtn">
+        <button id="submitBtn">
             <span id="btnText">Print Document</span>
         </button>
         
         <div id="status">
-            <span class="icon">ℹ️</span>
             <span id="statusText"></span>
         </div>
-        
-        <!-- CORS Configuration Section -->
-        <div class="config-section">
-            <div class="config-toggle" id="configToggle">
-                <h3>Advanced Configuration</h3>
-                <span style="margin-left: auto;">▼</span>
-            </div>
-            
-            <div class="config-content" id="configContent">
-                <div class="form-group">
-                    <label>Connection Method</label>
-                    <div class="proxy-option">
-                        <input type="radio" id="directMode" name="connectionMode" value="direct" checked>
-                        <label for="directMode">Direct Connection (Requires CORS)</label>
-                    </div>
-                    <div class="proxy-option">
-                        <input type="radio" id="proxyMode" name="connectionMode" value="proxy">
-                        <label for="proxyMode">Use Proxy (Bypass CORS for development)</label>
-                    </div>
-                </div>
-                
-                <div class="form-group" id="proxyUrlGroup" style="display: none;">
-                    <label for="proxyUrl">Proxy URL</label>
-                    <input type="text" id="proxyUrl" placeholder="https://your-proxy.com/api">
-                    <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">
-                        For development only. Create a simple proxy using services like Glitch, 
-                        Heroku, or a Cloudflare Worker.
-                    </p>
-                </div>
-            </div>
-        </div>
     </div>
-    
-    <footer>
-        <p>Securely print documents to your remote printer from anywhere in the world</p>
-        <p>© 2023 Remote Printer System | All rights reserved</p>
-    </footer>
-    
+
     <script>
+        // Configuration
+        const PROXY_URL = 'https://printing.tanjukhan2009.workers.dev';
+        
         // DOM elements
         const fileInput = document.getElementById('fileToPrint');
         const fileNameDisplay = document.getElementById('fileName');
         const passwordInput = document.getElementById('password');
-        const printModeInput = document.getElementById('printMode');
         const submitBtn = document.getElementById('submitBtn');
         const btnText = document.getElementById('btnText');
         const status = document.getElementById('status');
         const statusText = document.getElementById('statusText');
-        const modeOptions = document.querySelectorAll('.mode-option');
-        const togglePasswordBtn = document.querySelector('.toggle-password');
-        const configToggle = document.getElementById('configToggle');
-        const configContent = document.getElementById('configContent');
-        const proxyUrlGroup = document.getElementById('proxyUrlGroup');
-        const proxyUrlInput = document.getElementById('proxyUrl');
-        const directMode = document.getElementById('directMode');
-        const proxyMode = document.getElementById('proxyMode');
         
-        // Google Script URL - REPLACE WITH YOUR DEPLOYED URL
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8rO46epX1DwBUdnF2WC4_jKrQ1tKkt20iN73SmZ_dQ58KuwxTnJW-g3hNTHZYfbF_Tg/exec';
-        
-        // Update file name display
+        // Update filename display
         fileInput.addEventListener('change', function() {
-            if (this.files.length > 0) {
-                fileNameDisplay.textContent = this.files[0].name;
-                fileNameDisplay.className = 'file-name';
-            } else {
-                fileNameDisplay.textContent = 'No file selected';
-                fileNameDisplay.className = '';
-            }
+            fileNameDisplay.textContent = this.files[0]?.name || 'No file selected';
         });
         
-        // Print mode selection
-        modeOptions.forEach(option => {
-            option.addEventListener('click', function() {
-                modeOptions.forEach(opt => opt.classList.remove('selected'));
-                this.classList.add('selected');
-                printModeInput.value = this.dataset.mode;
-            });
-        });
-        
-        // Toggle password visibility
-        togglePasswordBtn.addEventListener('click', function() {
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                this.textContent = '🔒';
-            } else {
-                passwordInput.type = 'password';
-                this.textContent = '👁️';
-            }
-        });
-        
-        // Toggle config section
-        configToggle.addEventListener('click', function() {
-            configContent.classList.toggle('active');
-            this.querySelector('span').textContent = 
-                configContent.classList.contains('active') ? '▲' : '▼';
-        });
-        
-        // Handle proxy mode toggle
-        proxyMode.addEventListener('change', function() {
-            if (this.checked) {
-                proxyUrlGroup.style.display = 'block';
-                showWarning('Proxy mode is for development only. Do not use in production.');
-            }
-        });
-        
-        directMode.addEventListener('change', function() {
-            if (this.checked) {
-                proxyUrlGroup.style.display = 'none';
-            }
-        });
-        
-        // Form submission handler
-        document.getElementById('submitBtn').addEventListener('click', async function(e) {
+        // Form submission
+        submitBtn.addEventListener('click', async function(e) {
             e.preventDefault();
             
             // Reset status
-            status.className = '';
-            statusText.textContent = '';
+            status.style.display = 'none';
             
             // Get form data
             const file = fileInput.files[0];
             const password = passwordInput.value;
-            const printMode = printModeInput.value;
-            const useProxy = proxyMode.checked;
-            const proxyUrl = proxyUrlInput.value;
             
-            // Validate inputs
-            if (!file) {
-                showError('Please select a file to print');
-                return;
-            }
+            // Validate
+            if (!file) return showError('Please select a file');
+            if (!password) return showError('Please enter password');
+            if (file.size > 5 * 1024 * 1024) return showError('File too large (max 5MB)');
             
-            if (!password) {
-                showError('Please enter your security password');
-                return;
-            }
-            
-            // Check file size
-            if (file.size > 5 * 1024 * 1024) {
-                showError('File size must be less than 5MB');
-                return;
-            }
-            
-            // Check file type
-            const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+            // Allowed file types
+            const validTypes = [
+                'application/pdf', 
+                'image/jpeg', 
+                'image/png', 
+                'text/plain'
+            ];
             if (!validTypes.includes(file.type)) {
-                showError('Only PDF, JPG, and PNG files are supported');
-                return;
+                return showError('Invalid file type (PDF, JPG, PNG, TXT only)');
             }
             
-            // Update UI
-            submitBtn.disabled = true;
-            btnText.innerHTML = '<div class="loading"></div> Processing...';
-            status.style.display = 'none';
-            
+            // Process
             try {
-                // Read file as Base64
-                const fileBase64 = await readFileAsBase64(file);
+                submitBtn.disabled = true;
+                btnText.innerHTML = '<div class="loading"></div> Processing';
                 
-                // Hash password
+                const fileBase64 = await readFileAsBase64(file);
                 const passwordHash = CryptoJS.SHA256(password).toString();
                 
-                // Prepare payload
-                const payload = {
-                    passwordHash: passwordHash,
-                    fileName: file.name,
-                    fileData: fileBase64,
-                    fileType: file.type,
-                    printMode: printMode
-                };
-                
-                // Determine endpoint URL
-                let endpointUrl = GOOGLE_SCRIPT_URL;
-                
-                if (useProxy && proxyUrl) {
-                    endpointUrl = proxyUrl;
-                    console.log("Using proxy URL:", endpointUrl);
-                }
-                
-                // Send to backend (either direct or via proxy)
-                const response = await fetch(endpointUrl, {
+                const response = await fetch(PROXY_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        passwordHash,
+                        fileName: file.name,
+                        fileData: fileBase64,
+                        fileType: file.type,
+                        printMode: 'color'
+                    })
                 });
                 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `Server responded with status ${response.status}`);
+                    const error = await response.json();
+                    throw new Error(error.error || 'Request failed');
                 }
                 
                 const result = await response.json();
-                
-                if (result.error) {
-                    throw new Error(result.error);
-                }
-                
-                // Show success
-                showSuccess('Print job sent successfully! Your document will print shortly.');
+                showSuccess(`File processed: ${result.fileName} (${result.fileSize})`);
                 
                 // Reset form
                 fileInput.value = '';
                 fileNameDisplay.textContent = 'No file selected';
-                fileNameDisplay.className = '';
                 passwordInput.value = '';
                 
             } catch (error) {
-                console.error('Print error:', error);
-                showError(`Print failed: ${error.message}`);
+                showError(error.message);
             } finally {
                 submitBtn.disabled = false;
                 btnText.textContent = 'Print Document';
             }
         });
         
-        // Helper function to read file as Base64
         function readFileAsBase64(file) {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 const reader = new FileReader();
-                reader.onload = () => {
-                    // Remove data URL prefix
-                    const base64Data = reader.result.split(',')[1];
-                    resolve(base64Data);
-                };
-                reader.onerror = reject;
+                reader.onload = (e) => resolve(e.target.result.split(',')[1]);
                 reader.readAsDataURL(file);
             });
         }
         
-        // Show error message
         function showError(message) {
             status.className = 'error';
             status.style.display = 'flex';
             statusText.textContent = message;
-            document.querySelector('.icon').textContent = '❌';
         }
         
-        // Show success message
         function showSuccess(message) {
             status.className = 'success';
             status.style.display = 'flex';
             statusText.textContent = message;
-            document.querySelector('.icon').textContent = '✅';
-        }
-        
-        // Show warning message
-        function showWarning(message) {
-            status.className = 'warning';
-            status.style.display = 'flex';
-            statusText.textContent = message;
-            document.querySelector('.icon').textContent = '⚠️';
         }
     </script>
 </body>
