@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Remote Printer</title>
+    <title>Remote Printer with CORS Solution</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         :root {
@@ -11,6 +11,7 @@
             --primary-dark: #3367d6;
             --success: #34a853;
             --error: #ea4335;
+            --warning: #fbbc05;
             --gray: #f5f5f5;
             --dark: #333;
             --light: #fff;
@@ -39,7 +40,7 @@
             text-align: center;
             margin: 30px 0;
             width: 100%;
-            max-width: 600px;
+            max-width: 800px;
         }
         
         h1 {
@@ -61,7 +62,7 @@
             box-shadow: var(--shadow);
             padding: 30px;
             width: 100%;
-            max-width: 600px;
+            max-width: 800px;
             margin-bottom: 30px;
             transition: transform 0.3s ease;
         }
@@ -180,6 +181,13 @@
             display: flex !important;
         }
         
+        .warning {
+            background-color: rgba(251, 188, 5, 0.1);
+            border: 1px solid rgba(251, 188, 5, 0.2);
+            color: var(--warning);
+            display: flex !important;
+        }
+        
         .loading {
             display: inline-block;
             width: 24px;
@@ -250,6 +258,36 @@
             padding: 0;
         }
         
+        .config-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #eaeaea;
+        }
+        
+        .config-toggle {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+        
+        .config-content {
+            display: none;
+        }
+        
+        .config-content.active {
+            display: block;
+        }
+        
+        .proxy-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
         footer {
             text-align: center;
             margin-top: auto;
@@ -318,6 +356,37 @@
             <span class="icon">ℹ️</span>
             <span id="statusText"></span>
         </div>
+        
+        <!-- CORS Configuration Section -->
+        <div class="config-section">
+            <div class="config-toggle" id="configToggle">
+                <h3>Advanced Configuration</h3>
+                <span style="margin-left: auto;">▼</span>
+            </div>
+            
+            <div class="config-content" id="configContent">
+                <div class="form-group">
+                    <label>Connection Method</label>
+                    <div class="proxy-option">
+                        <input type="radio" id="directMode" name="connectionMode" value="direct" checked>
+                        <label for="directMode">Direct Connection (Requires CORS)</label>
+                    </div>
+                    <div class="proxy-option">
+                        <input type="radio" id="proxyMode" name="connectionMode" value="proxy">
+                        <label for="proxyMode">Use Proxy (Bypass CORS for development)</label>
+                    </div>
+                </div>
+                
+                <div class="form-group" id="proxyUrlGroup" style="display: none;">
+                    <label for="proxyUrl">Proxy URL</label>
+                    <input type="text" id="proxyUrl" placeholder="https://your-proxy.com/api">
+                    <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">
+                        For development only. Create a simple proxy using services like Glitch, 
+                        Heroku, or a Cloudflare Worker.
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
     
     <footer>
@@ -337,9 +406,15 @@
         const statusText = document.getElementById('statusText');
         const modeOptions = document.querySelectorAll('.mode-option');
         const togglePasswordBtn = document.querySelector('.toggle-password');
+        const configToggle = document.getElementById('configToggle');
+        const configContent = document.getElementById('configContent');
+        const proxyUrlGroup = document.getElementById('proxyUrlGroup');
+        const proxyUrlInput = document.getElementById('proxyUrl');
+        const directMode = document.getElementById('directMode');
+        const proxyMode = document.getElementById('proxyMode');
         
         // Google Script URL - REPLACE WITH YOUR DEPLOYED URL
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgmcnso_zDR4YqB27zSqfI6Mo9arJBfLKbElRdtl5ddsA0L2ZYNfs7ZSpYaatgAUfUnQ/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8rO46epX1DwBUdnF2WC4_jKrQ1tKkt20iN73SmZ_dQ58KuwxTnJW-g3hNTHZYfbF_Tg/exec';
         
         // Update file name display
         fileInput.addEventListener('change', function() {
@@ -372,6 +447,27 @@
             }
         });
         
+        // Toggle config section
+        configToggle.addEventListener('click', function() {
+            configContent.classList.toggle('active');
+            this.querySelector('span').textContent = 
+                configContent.classList.contains('active') ? '▲' : '▼';
+        });
+        
+        // Handle proxy mode toggle
+        proxyMode.addEventListener('change', function() {
+            if (this.checked) {
+                proxyUrlGroup.style.display = 'block';
+                showWarning('Proxy mode is for development only. Do not use in production.');
+            }
+        });
+        
+        directMode.addEventListener('change', function() {
+            if (this.checked) {
+                proxyUrlGroup.style.display = 'none';
+            }
+        });
+        
         // Form submission handler
         document.getElementById('submitBtn').addEventListener('click', async function(e) {
             e.preventDefault();
@@ -384,6 +480,8 @@
             const file = fileInput.files[0];
             const password = passwordInput.value;
             const printMode = printModeInput.value;
+            const useProxy = proxyMode.checked;
+            const proxyUrl = proxyUrlInput.value;
             
             // Validate inputs
             if (!file) {
@@ -430,18 +528,26 @@
                     printMode: printMode
                 };
                 
-                // Send to Google Script
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                // Determine endpoint URL
+                let endpointUrl = GOOGLE_SCRIPT_URL;
+                
+                if (useProxy && proxyUrl) {
+                    endpointUrl = proxyUrl;
+                    console.log("Using proxy URL:", endpointUrl);
+                }
+                
+                // Send to backend (either direct or via proxy)
+                const response = await fetch(endpointUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify(payload)
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`Server responded with status ${response.status}`);
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Server responded with status ${response.status}`);
                 }
                 
                 const result = await response.json();
@@ -496,6 +602,14 @@
             status.style.display = 'flex';
             statusText.textContent = message;
             document.querySelector('.icon').textContent = '✅';
+        }
+        
+        // Show warning message
+        function showWarning(message) {
+            status.className = 'warning';
+            status.style.display = 'flex';
+            statusText.textContent = message;
+            document.querySelector('.icon').textContent = '⚠️';
         }
     </script>
 </body>
